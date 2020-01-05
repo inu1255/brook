@@ -10,9 +10,9 @@ import (
 	"net"
 	"time"
 
-	cache "github.com/patrickmn/go-cache"
-	"github.com/txthinking/ant"
-	"github.com/txthinking/brook/plugin"
+	ant "github.com/txthinking/ant"
+	"github.com/inu1255/brook/plugin"
+	"github.com/patrickmn/go-cache"
 	"github.com/txthinking/socks5"
 )
 

@@ -7,7 +7,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/txthinking/ant"
+	ant "github.com/txthinking/ant"
 )
 
 // CipherConn is the encrypted connection

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	cache "github.com/patrickmn/go-cache"
-	"github.com/txthinking/brook/plugin"
+	"github.com/inu1255/brook/plugin"
 	"github.com/txthinking/socks5"
 )
 

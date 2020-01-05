@@ -1,7 +1,7 @@
 package brook
 
 import (
-	"github.com/txthinking/ant"
+	ant "github.com/txthinking/ant"
 	"github.com/txthinking/socks5"
 )
 
