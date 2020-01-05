@@ -116,6 +116,7 @@ func (s *Server) RunUDPServer() error {
 			return err
 		}
 		go func(addr *net.UDPAddr, b []byte) {
+			Traffic.addUp(s.UDPAddr.Port, len(b))
 			if err := s.UDPHandle(addr, b); err != nil {
 				log.Println(err)
 				return
@@ -186,6 +187,7 @@ func (s *Server) TCPHandle(c *net.TCPConn) error {
 			if err != nil {
 				return
 			}
+			Traffic.addDown(s.TCPAddr.Port, i)
 			n, err = WriteTo(c, b[0:i], k, n, false)
 			if err != nil {
 				return
@@ -203,6 +205,7 @@ func (s *Server) TCPHandle(c *net.TCPConn) error {
 		if err != nil {
 			return nil
 		}
+		Traffic.addUp(s.TCPAddr.Port, len(b))
 		if _, err := rc.Write(b); err != nil {
 			return nil
 		}
@@ -276,6 +279,7 @@ func (s *Server) UDPHandle(addr *net.UDPAddr, b []byte) error {
 				log.Println(err)
 				break
 			}
+			Traffic.addDown(s.UDPAddr.Port, len(cd))
 			if _, err := s.UDPConn.WriteToUDP(cd, ue.ClientAddr); err != nil {
 				break
 			}
