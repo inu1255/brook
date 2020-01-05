@@ -1,6 +1,7 @@
 package brook
 
 import (
+	"io"
 	"sync"
 	"time"
 )
@@ -47,6 +48,9 @@ func (t *traffic) getP(port int) *portTraffic {
 }
 
 func (t *traffic) addUp(port, size int) {
+	if size < 1 {
+		return
+	}
 	p := t.getP(port)
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -76,6 +80,9 @@ func (t *traffic) addUp(port, size int) {
 }
 
 func (t *traffic) addDown(port, size int) {
+	if size < 1 {
+		return
+	}
 	p := t.ports[port]
 	if p == nil {
 		p = new(portTraffic)
@@ -105,5 +112,61 @@ func (t *traffic) addDown(port, size int) {
 		p.data = size
 	} else {
 		p.data += size
+	}
+}
+
+func (t *traffic) copyUp(port int, dst io.Writer, src io.Reader) {
+	size := 32 * 1024
+	if l, ok := src.(*io.LimitedReader); ok && int64(size) > l.N {
+		if l.N < 1 {
+			size = 1
+		} else {
+			size = int(l.N)
+		}
+	}
+	var buf = make([]byte, size)
+	for {
+		nr, er := src.Read(buf)
+		if nr > 0 {
+			nw, ew := dst.Write(buf[0:nr])
+			t.addUp(port, nw)
+			if ew != nil {
+				break
+			}
+			if nr != nw {
+				break
+			}
+		}
+		if er != nil {
+			break
+		}
+	}
+}
+
+func (t *traffic) copyDown(port int, dst io.Writer, src io.Reader) {
+	size := 32 * 1024
+	if l, ok := src.(*io.LimitedReader); ok && int64(size) > l.N {
+		if l.N < 1 {
+			size = 1
+		} else {
+			size = int(l.N)
+		}
+	}
+	var buf = make([]byte, size)
+	for {
+		nr, er := src.Read(buf)
+		if nr > 0 {
+			nw, ew := dst.Write(buf[0:nr])
+			t.addDown(port, nw)
+			if ew != nil {
+				break
+			}
+			if nr != nw {
+				break
+			}
+		}
+		if er != nil {
+			break
+		}
 	}
 }
