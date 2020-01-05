@@ -23,20 +23,21 @@ type portTraffic struct {
 var Traffic = &traffic{
 	Threshold: 200 * 1024,
 	onData:    func(int, int, int) {},
+	ports:     make(map[int]*portTraffic),
 }
 
-func (t traffic) OnData(fn func(int, int, int)) {
+func (t *traffic) OnData(fn func(int, int, int)) {
 	if fn != nil {
 		t.onData = fn
 	}
 }
 
-func (t traffic) LimitSpeed(port, speed int) {
+func (t *traffic) LimitSpeed(port, speed int) {
 	p := t.getP(port)
 	p.speed = speed
 }
 
-func (t traffic) getP(port int) *portTraffic {
+func (t *traffic) getP(port int) *portTraffic {
 	p := t.ports[port]
 	if p == nil {
 		p = new(portTraffic)
@@ -45,14 +46,15 @@ func (t traffic) getP(port int) *portTraffic {
 	return p
 }
 
-func (t traffic) addUp(port, size int) {
+func (t *traffic) addUp(port, size int) {
 	p := t.getP(port)
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	p.up += size
-	if p.up+p.down < t.Threshold {
-		t.onData(port, p.up, p.down)
+	if p.up+p.down >= t.Threshold {
+		go t.onData(port, p.up, p.down)
 		p.up = 0
+		p.down = 0
 	}
 	if p.speed < 1 {
 		return
@@ -73,7 +75,7 @@ func (t traffic) addUp(port, size int) {
 	}
 }
 
-func (t traffic) addDown(port, size int) {
+func (t *traffic) addDown(port, size int) {
 	p := t.ports[port]
 	if p == nil {
 		p = new(portTraffic)
@@ -82,9 +84,10 @@ func (t traffic) addDown(port, size int) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	p.down += int(size)
-	if p.up+p.down < t.Threshold {
-		t.onData(port, p.up, p.down)
+	if p.up+p.down >= t.Threshold {
+		go t.onData(port, p.up, p.down)
 		p.up = 0
+		p.down = 0
 	}
 	if p.speed < 1 {
 		return
