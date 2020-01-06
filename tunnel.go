@@ -1,19 +1,30 @@
+// Copyright (c) 2016-present Cloud <cloud@txthinking.com>
+//
+// This program is free software; you can redistribute it and/or
+// modify it under the terms of version 3 of the GNU General Public
+// License as published by the Free Software Foundation.
+//
+// This program is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package brook
 
 import (
-	"encoding/binary"
-	"errors"
 	"io"
 	"log"
 	"net"
 	"time"
 
 	cache "github.com/patrickmn/go-cache"
-	"github.com/inu1255/brook/plugin"
 	"github.com/txthinking/socks5"
 )
 
-// Tunnel
+// Tunnel.
 type Tunnel struct {
 	TCPAddr       *net.TCPAddr
 	UDPAddr       *net.UDPAddr
@@ -27,10 +38,9 @@ type Tunnel struct {
 	TCPDeadline   int
 	TCPTimeout    int
 	UDPDeadline   int
-	TokenGetter   plugin.TokenGetter
 }
 
-// NewTunnel
+// NewTunnel.
 func NewTunnel(addr, to, remote, password string, tcpTimeout, tcpDeadline, udpDeadline int) (*Tunnel, error) {
 	taddr, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {
@@ -48,7 +58,7 @@ func NewTunnel(addr, to, remote, password string, tcpTimeout, tcpDeadline, udpDe
 	if err != nil {
 		return nil, err
 	}
-	cs := cache.New(60*time.Minute, 10*time.Minute)
+	cs := cache.New(cache.NoExpiration, cache.NoExpiration)
 	s := &Tunnel{
 		ToAddr:        to,
 		Password:      []byte(password),
@@ -64,12 +74,7 @@ func NewTunnel(addr, to, remote, password string, tcpTimeout, tcpDeadline, udpDe
 	return s, nil
 }
 
-// SetToken set token plugin
-func (s *Tunnel) SetTokenGetter(token plugin.TokenGetter) {
-	s.TokenGetter = token
-}
-
-// Run server
+// Run server.
 func (s *Tunnel) ListenAndServe() error {
 	errch := make(chan error)
 	go func() {
@@ -81,7 +86,7 @@ func (s *Tunnel) ListenAndServe() error {
 	return <-errch
 }
 
-// RunTCPServer starts tcp server
+// RunTCPServer starts tcp server.
 func (s *Tunnel) RunTCPServer() error {
 	var err error
 	s.TCPListen, err = net.ListenTCP("tcp", s.TCPAddr)
@@ -116,7 +121,7 @@ func (s *Tunnel) RunTCPServer() error {
 	return nil
 }
 
-// RunUDPServer starts udp server
+// RunUDPServer starts udp server.
 func (s *Tunnel) RunUDPServer() error {
 	var err error
 	s.UDPConn, err = net.ListenUDP("udp", s.UDPAddr)
@@ -140,7 +145,7 @@ func (s *Tunnel) RunUDPServer() error {
 	return nil
 }
 
-// Shutdown server
+// Shutdown server.
 func (s *Tunnel) Shutdown() error {
 	var err, err1 error
 	if s.TCPListen != nil {
@@ -155,7 +160,7 @@ func (s *Tunnel) Shutdown() error {
 	return err1
 }
 
-// TCPHandle handle request
+// TCPHandle handles request.
 func (s *Tunnel) TCPHandle(c *net.TCPConn) error {
 	tmp, err := Dial.Dial("tcp", s.RemoteTCPAddr.String())
 	if err != nil {
@@ -190,19 +195,6 @@ func (s *Tunnel) TCPHandle(c *net.TCPConn) error {
 	rawaddr = append(rawaddr, a)
 	rawaddr = append(rawaddr, address...)
 	rawaddr = append(rawaddr, port...)
-	if s.TokenGetter != nil {
-		t, err := s.TokenGetter.Get()
-		if err != nil {
-			return err
-		}
-		if len(t) == 0 {
-			return errors.New("Miss Token")
-		}
-		bb := make([]byte, 2)
-		binary.BigEndian.PutUint16(bb, uint16(len(t)))
-		t = append(bb, t...)
-		rawaddr = append(t, rawaddr...)
-	}
 	n, err = WriteTo(rc, rawaddr, k, n, true)
 	if err != nil {
 		return err
@@ -254,7 +246,7 @@ func (s *Tunnel) TCPHandle(c *net.TCPConn) error {
 	return nil
 }
 
-// UDPHandle handle packet
+// UDPHandle handles packet.
 func (s *Tunnel) UDPHandle(addr *net.UDPAddr, b []byte) error {
 	a, address, port, err := socks5.ParseAddress(s.ToAddr)
 	if err != nil {
@@ -267,19 +259,6 @@ func (s *Tunnel) UDPHandle(addr *net.UDPAddr, b []byte) error {
 	b = append(rawaddr, b...)
 
 	send := func(ue *socks5.UDPExchange, data []byte) error {
-		if s.TokenGetter != nil {
-			t, err := s.TokenGetter.Get()
-			if err != nil {
-				return err
-			}
-			if len(t) == 0 {
-				return errors.New("Miss Token")
-			}
-			bb := make([]byte, 2)
-			binary.BigEndian.PutUint16(bb, uint16(len(t)))
-			t = append(bb, t...)
-			data = append(t, data...)
-		}
 		cd, err := Encrypt(s.Password, data)
 		if err != nil {
 			return err
@@ -308,6 +287,7 @@ func (s *Tunnel) UDPHandle(addr *net.UDPAddr, b []byte) error {
 		RemoteConn: rc,
 	}
 	if err := send(ue, b); err != nil {
+		ue.RemoteConn.Close()
 		return err
 	}
 	s.UDPExchanges.Set(ue.ClientAddr.String(), ue, cache.DefaultExpiration)
@@ -327,7 +307,7 @@ func (s *Tunnel) UDPHandle(addr *net.UDPAddr, b []byte) error {
 			if err != nil {
 				break
 			}
-			_, _, _, data, err := Decrypt(s.Password, b[0:n], nil)
+			_, _, _, data, err := Decrypt(s.Password, b[0:n])
 			if err != nil {
 				log.Println(err)
 				break

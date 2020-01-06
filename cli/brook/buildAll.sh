@@ -8,10 +8,14 @@ GOOS=linux GOARCH=arm GOARM=6 go build -o brook_linux_arm6 .
 GOOS=linux GOARCH=arm GOARM=5 go build -o brook_linux_arm5 .
 GOOS=linux GOARCH=mips go build -o brook_linux_mips .
 GOOS=linux GOARCH=mipsle go build -o brook_linux_mipsle .
+GOOS=linux GOARCH=mips GOMIPS=softfloat go build -o brook_linux_mips_softfloat .
+GOOS=linux GOARCH=mipsle GOMIPS=softfloat go build -o brook_linux_mipsle_softfloat .
 GOOS=linux GOARCH=mips64 go build -o brook_linux_mips64 .
 GOOS=linux GOARCH=mips64le go build -o brook_linux_mips64le .
+GOOS=linux GOARCH=mips64 GOMIPS=softfloat go build -o brook_linux_mips64_softfloat .
+GOOS=linux GOARCH=mips64le GOMIPS=softfloat go build -o brook_linux_mips64le_softfloat .
 GOOS=linux GOARCH=ppc64 go build -o brook_linux_ppc64 .
 GOOS=linux GOARCH=ppc64le go build -o brook_linux_ppc64le .
-GOOS=darwin GOARCH=amd64 go build -o brook_macos_amd64 .
+GOOS=darwin GOARCH=amd64 go build -o brook_darwin_amd64 .
 GOOS=windows GOARCH=amd64 go build -o brook_windows_amd64.exe .
 GOOS=windows GOARCH=386 go build -o brook_windows_386.exe .

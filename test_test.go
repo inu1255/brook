@@ -12,16 +12,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// +build darwin
-// +build amd64 386
-
-package sysproxy
+package brook
 
 import (
-	"log"
 	"testing"
 )
 
-func TestGetNetworkService(t *testing.T) {
-	log.Println(TurnOffSystemProxy())
+func TestTest(t *testing.T) {
 }
